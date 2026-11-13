@@ -51,6 +51,7 @@ test('FSC uses FSCOG mean, zero is valid, mask codes and poor QA are excluded', 
 test('import rejects product swaps, wrong radius, and invalid dates', () => {
   const item = summarizeScene({ ...metadata, mode: 'green', pixels: [{ ...position, B04: .2, B08: .6, SCL: 4 }] }, place)!;
   assert.doesNotThrow(() => validate(item, 0));
+  assert.doesNotThrow(() => validate({ ...item, placeId: 'wd-Q123190997' }, 0));
   assert.throws(() => validate({ ...item, product: 'CLMS-FSC-20M' }, 0));
   assert.throws(() => validate({ ...item, statistic: 'mean' }, 0));
   assert.throws(() => validate({ ...item, radiusMeters: 500 }, 0));

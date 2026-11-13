@@ -1,4 +1,6 @@
 import geojson from './places.json' with { type: 'json' };
+import regionalPlaces from './regional-places.json' with { type: 'json' };
+import extraPlaces from './places-extra.json' with { type: 'json' };
 
 export type Mode = 'green' | 'snow';
 export type Place = {
@@ -13,8 +15,11 @@ export type Place = {
   image: string;
   imageSource: string;
   imageCredit: string;
+  sourceUrl?: string;
+  sourceLabel?: string;
+  country?: string;
 };
-export type Town = { name: string; coordinates: [number, number]; osm: string };
+export type Town = { name: string; coordinates: [number, number]; osm: string; source?: string };
 export type Measurement = {
   placeId: string;
   mode: Mode;
@@ -23,7 +28,7 @@ export type Measurement = {
   validFraction: number;
   cloudFraction: number;
   source: string;
-  provenance: 'precomputed' | 'demo';
+  provenance: 'precomputed';
   sceneId?: string;
   product: 'S2-L2A-NDVI' | 'CLMS-FSC-20M';
   statistic: 'median' | 'mean';
@@ -32,12 +37,18 @@ export type Measurement = {
 
 // GeoJSON is the single source of truth for place coordinates (longitude, latitude).
 const features = geojson.features as Array<{ id: string; properties: Omit<Place, 'id' | 'coordinates'>; geometry: { type: string; coordinates: number[] } }>;
-export const places: Place[] = features.map((feature) => {
+const originalPlaces: Place[] = features.map((feature) => {
   if (feature.geometry.type !== 'Point' || feature.geometry.coordinates.length !== 2) throw new Error(`Invalid GeoJSON point: ${feature.id}`);
   const [longitude, latitude] = feature.geometry.coordinates;
   if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) throw new Error(`Invalid coordinates: ${feature.id}`);
   return { id: feature.id, ...feature.properties, coordinates: [latitude, longitude] };
 });
+const importedPlaces: Place[] = [...regionalPlaces, ...extraPlaces].map((place) => {
+  if (place.coordinates.length !== 2 || place.coordinates.some((coordinate) => !Number.isFinite(coordinate)))
+    throw new Error(`Invalid imported point: ${place.id}`);
+  return { ...place, coordinates: [place.coordinates[0], place.coordinates[1]] };
+});
+export const places: Place[] = [...originalPlaces, ...importedPlaces];
 
 // Nominatim geocoded representative points within the OSM municipality relations, 2026-11-13.
 export const towns: Town[] = [
@@ -48,10 +59,3 @@ export const towns: Town[] = [
   { name: 'Sušice', coordinates: [49.2313907, 13.5204076], osm: 'https://www.openstreetmap.org/relation/438289' },
 ];
 
-// Explicitly invented values, isolated from real observations and disabled by default.
-export const demoMeasurements: Measurement[] = [
-  ...[['cerchov', .79, 28], ['cerne-jezero', .68, 46], ['prasily', .83, 58], ['pancir', .72, 52], ['radyne', .64, 12]].flatMap(([placeId, ndvi, snow]) => [
-    { placeId: String(placeId), mode: 'green' as const, value: Number(ndvi), date: '2026-07-15', validFraction: .95, cloudFraction: .03, source: 'Demonstrační hodnoty', provenance: 'demo' as const, product: 'S2-L2A-NDVI' as const, statistic: 'median' as const, radiusMeters: 250 as const },
-    { placeId: String(placeId), mode: 'snow' as const, value: Number(snow), date: '2026-02-15', validFraction: .91, cloudFraction: .06, source: 'Demonstrační hodnoty', provenance: 'demo' as const, product: 'CLMS-FSC-20M' as const, statistic: 'mean' as const, radiusMeters: 250 as const },
-  ]),
-];

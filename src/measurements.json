@@ -1,1 +1,30 @@
-[]
+[
+  {
+    "placeId": "prasily",
+    "mode": "green",
+    "value": 0.9137254953384399,
+    "date": "2026-11-05",
+    "validFraction": 0.907843137254902,
+    "cloudFraction": 0,
+    "source": "https://sh.dataspace.copernicus.eu/catalog/v1/collections/sentinel-2-l2a/items/S2A_MSIL2A_20261105T101121_N0513_R022_T33UUQ_20261105T164009.SAFE",
+    "sceneId": "S2A_MSIL2A_20261105T101121_N0513_R022_T33UUQ_20261105T164009.SAFE",
+    "product": "S2-L2A-NDVI",
+    "statistic": "median",
+    "radiusMeters": 250,
+    "provenance": "precomputed"
+  },
+  {
+    "placeId": "wd-Q123190997",
+    "mode": "green",
+    "value": 0.6776067614555359,
+    "date": "2026-11-13",
+    "validFraction": 0.7495098039215686,
+    "cloudFraction": 0.25049019607843154,
+    "source": "https://sh.dataspace.copernicus.eu/catalog/v1/collections/sentinel-2-l2a/items/S2C_MSIL2A_20261113T101251_N0513_R022_T33UUR_20261113T140509.SAFE",
+    "sceneId": "S2C_MSIL2A_20261113T101251_N0513_R022_T33UUR_20261113T140509.SAFE",
+    "product": "S2-L2A-NDVI",
+    "statistic": "median",
+    "radiusMeters": 250,
+    "provenance": "precomputed"
+  }
+]

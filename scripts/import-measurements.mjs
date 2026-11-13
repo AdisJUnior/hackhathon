@@ -4,14 +4,16 @@ import { pathToFileURL } from 'node:url';
 
 const root = resolve(import.meta.dirname, '..');
 const geojson = JSON.parse(readFileSync(resolve(root, 'src/places.json'), 'utf8'));
-const placeIds = new Set(geojson.features.map((feature) => feature.id));
+const regional = JSON.parse(readFileSync(resolve(root, 'src/regional-places.json'), 'utf8'));
+const extra = JSON.parse(readFileSync(resolve(root, 'src/places-extra.json'), 'utf8'));
+const placeIds = new Set([...geojson.features.map((feature) => feature.id), ...regional.map((place) => place.id), ...extra.map((place) => place.id)]);
 const required = ['placeId', 'mode', 'value', 'date', 'validFraction', 'cloudFraction', 'source', 'provenance', 'sceneId', 'product', 'statistic', 'radiusMeters'];
 
 export function validate(item, index) {
   const fail = (message) => { throw new Error(`Záznam ${index}: ${message}`); };
   if (!item || typeof item !== 'object' || required.some((key) => !(key in item))) fail('chybí požadovaná pole');
   if (!placeIds.has(item.placeId) || !['green', 'snow'].includes(item.mode)) fail('neznámé místo nebo režim');
-  if (item.provenance !== 'precomputed') fail('import přijímá jen předpočítaná data, nikoli demo');
+  if (item.provenance !== 'precomputed') fail('import přijímá jen předpočítaná měření');
   if (item.product !== (item.mode === 'green' ? 'S2-L2A-NDVI' : 'CLMS-FSC-20M')) fail('nesprávný produkt pro režim');
   if (item.statistic !== (item.mode === 'green' ? 'median' : 'mean')) fail('nesprávná statistika pro režim');
   if (item.radiusMeters !== 250) fail('vyhodnocovací poloměr musí být 250 m');
