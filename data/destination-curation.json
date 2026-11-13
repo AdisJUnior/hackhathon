@@ -1,0 +1,62 @@
+{
+  "date": "2026-11-13",
+  "previousCount": 309,
+  "currentCount": 300,
+  "criterion": "Výslovně nepřístupné body, duplicitní nebo chybně zařazené body a slabě doložené obecné záznamy; zachováno nejméně pět cílů do 5 km od každé výchozí obce.",
+  "removed": [
+    {
+      "id": "wd-Q11878900",
+      "name": "Velká Černá Hať",
+      "reason": "Záznam osady je veden jako zámek a překrývá se se samostatným bodem zámku.",
+      "sourceUrl": "https://www.wikidata.org/wiki/Q11878900"
+    },
+    {
+      "id": "wd-Q124302031",
+      "name": "zámecký park a zahrada v Manětíně",
+      "reason": "Souhrnný bod parku a zahrady překrývá dva konkrétní body v Manětíně.",
+      "sourceUrl": "https://www.wikidata.org/wiki/Q124302031"
+    },
+    {
+      "id": "wd-Q38234671",
+      "name": "Úlice",
+      "reason": "Popis výslovně uvádí soukromý objekt nepřístupný veřejnosti.",
+      "sourceUrl": "https://www.wikidata.org/wiki/Q38234671"
+    },
+    {
+      "id": "wd-Q84224893",
+      "name": "zámek Chocomyšl",
+      "reason": "Pouze obecný popis a odkaz na Wikidata; přístupnost není ověřena.",
+      "sourceUrl": "https://www.wikidata.org/wiki/Q84224893"
+    },
+    {
+      "id": "wd-Q84231432",
+      "name": "zámek Újezdec",
+      "reason": "Pouze obecný popis a odkaz na Wikidata; přístupnost není ověřena.",
+      "sourceUrl": "https://www.wikidata.org/wiki/Q84231432"
+    },
+    {
+      "id": "wd-Q84229257",
+      "name": "zámek Terešov",
+      "reason": "Pouze obecný popis a odkaz na Wikidata; přístupnost není ověřena.",
+      "sourceUrl": "https://www.wikidata.org/wiki/Q84229257"
+    },
+    {
+      "id": "wd-Q62486703",
+      "name": "Zámek Radnice",
+      "reason": "Pouze obecný popis a odkaz na Wikidata; přístupnost není ověřena.",
+      "sourceUrl": "https://www.wikidata.org/wiki/Q62486703"
+    },
+    {
+      "id": "wd-Q116036568",
+      "name": "zámek Starý Smolivec",
+      "reason": "Pouze obecný popis a odkaz na Wikidata; přístupnost není ověřena.",
+      "sourceUrl": "https://www.wikidata.org/wiki/Q116036568"
+    },
+    {
+      "id": "wd-Q135442755",
+      "name": "Malonice",
+      "reason": "Popis výslovně uvádí nepřístupnost veřejnosti.",
+      "sourceUrl": "https://www.wikidata.org/wiki/Q135442755"
+    }
+  ]
+}

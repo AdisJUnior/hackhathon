@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import test from 'node:test';
 import { places, towns, type Measurement } from './data.ts';
 import { distanceKm, explore, recommend, validMeasurement } from './recommend.ts';
@@ -10,6 +11,14 @@ const testMeasurements: Measurement[] = [
     { placeId: String(placeId), mode: 'snow' as const, value: Number(snow), date: '2026-02-15', validFraction: .91, cloudFraction: .06, source: 'https://example.org/scene', provenance: 'precomputed' as const, sceneId: 'TEST_SCENE', product: 'CLMS-FSC-20M' as const, statistic: 'mean' as const, radiusMeters: 250 as const },
   ]),
 ];
+
+test('destination catalog keeps the same 300 points', () => {
+  assert.equal(places.length, 300);
+  const pointIdsAndCoordinates = places.map((place) => [place.id, place.coordinates])
+    .sort(([left], [right]) => String(left).localeCompare(String(right)));
+  const fingerprint = createHash('sha256').update(JSON.stringify(pointIdsAndCoordinates)).digest('hex');
+  assert.equal(fingerprint, 'a38354bfa7b3b961ca3253ea4ed658582d033da58e11d953e65b2747a2d76581');
+});
 
 test('distance uses real coordinates and respects range', () => {
   assert.equal(distanceKm(towns[0].coordinates, towns[0].coordinates), 0);

@@ -48,6 +48,7 @@ const importedPlaces: Place[] = [...regionalPlaces, ...extraPlaces].map((place) 
     throw new Error(`Invalid imported point: ${place.id}`);
   return { ...place, coordinates: [place.coordinates[0], place.coordinates[1]] };
 });
+// The checked-in lists are the frozen 300-place catalog. Import scripts write candidates elsewhere.
 export const places: Place[] = [...originalPlaces, ...importedPlaces];
 
 // Nominatim geocoded representative points within the OSM municipality relations, 2026-11-13.

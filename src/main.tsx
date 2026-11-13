@@ -20,6 +20,7 @@ const regionBounds: L.LatLngBoundsExpression = [
 ];
 const heroPlaces = ['prasily', 'cerne-jezero', 'cerchov', 'pancir', 'wd-Q15586269']
   .map((id) => places.find((place) => place.id === id)).filter((place): place is Place => Boolean(place));
+const HERO_CYCLE_MS = 5000;
 const heroImageUrl = (place: Place) => place.imageSource.startsWith('https://commons.wikimedia.org/wiki/File:')
   ? `https://commons.wikimedia.org/wiki/Special:FilePath/${place.imageSource.split('/File:')[1]}?width=1400`
   : place.image.replace(/width=400\b/, 'width=1400');
@@ -76,27 +77,35 @@ function App() {
   const { ranked: results, visible: display, outside } = useMemo(() => explore(places, town, range, mode, importedMeasurements), [town, range, mode]);
   const selected = places.find((place) => place.id === selectedId) ?? null;
   const eligibleCount = places.filter((place) => distanceKm(town.coordinates, place.coordinates) <= range).length;
-  const themeLabel = mode === 'green' ? 'Vegetace v okolí' : 'Sněhová pokrývka';
-  const nextHeroPlace = heroPlaces.length ? heroPlaces[(heroIndex + 1) % heroPlaces.length] : null;
+  const selectedMeasurement = display.find((item) => item.place.id === selectedId)?.measurement ?? null;
+  const upcomingHeroIndex = heroPlaces.length ? (heroIndex + 1) % heroPlaces.length : 0;
 
   useEffect(() => { setSelectedId(null); }, [mode, townIndex, range]);
   useEffect(() => {
     if (heroPlaces.length < 2) return;
     const next = () => setHeroIndex((index) => (index + 1) % heroPlaces.length);
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      const timer = window.setTimeout(next, 5000);
+    const slide = heroSlideRefs.current[heroIndex];
+    const upcoming = heroSlideRefs.current[(heroIndex + 1) % heroPlaces.length];
+    if (!slide || !upcoming || !slide.animate || !upcoming.animate) {
+      const timer = window.setTimeout(next, HERO_CYCLE_MS);
       return () => window.clearTimeout(timer);
     }
-    const slide = heroSlideRefs.current[heroIndex];
-    if (!slide) return;
-    const animation = slide.animate([
-      { transform: 'translateX(0)', offset: 0 },
-      { transform: 'translateX(-1%)', offset: .62 },
-      { transform: 'translateX(-5%)', offset: .77 },
-      { transform: 'translateX(-105%)', offset: 1 },
-    ], { duration: 5000, easing: 'linear', fill: 'forwards' });
-    animation.onfinish = next;
-    return () => { animation.onfinish = null; animation.cancel(); };
+    const smallScreen = window.matchMedia('(max-width: 600px)').matches;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const travel = smallScreen ? 0 : reducedMotion ? .75 : 1.5;
+    const blur = reducedMotion ? 3 : 5;
+    const currentAnimation = slide.animate([
+      { transform: 'translateX(0) scale(1.04)', opacity: 1, filter: 'blur(0)', offset: 0 },
+      { transform: smallScreen ? 'translateX(0) scale(1.04)' : `translateX(${travel / 3}%) scale(1.045)`, opacity: 1, filter: 'blur(0)', offset: .54 },
+      { transform: `translateX(${travel}%) scale(1.04)`, opacity: 0, filter: `blur(${blur}px)`, offset: 1 },
+    ], { duration: HERO_CYCLE_MS, easing: 'ease-in-out', fill: 'forwards' });
+    const upcomingAnimation = upcoming.animate([
+      { transform: `translateX(${-travel}%) scale(1.04)`, opacity: 0, filter: `blur(${blur}px)`, offset: 0 },
+      { transform: `translateX(${-travel}%) scale(1.04)`, opacity: 0, filter: `blur(${blur}px)`, offset: .54 },
+      { transform: 'translateX(0) scale(1.04)', opacity: 1, filter: 'blur(0)', offset: 1 },
+    ], { duration: HERO_CYCLE_MS, easing: 'ease-in-out', fill: 'forwards' });
+    currentAnimation.onfinish = next;
+    return () => { currentAnimation.onfinish = null; currentAnimation.cancel(); upcomingAnimation.cancel(); };
   }, [heroIndex]);
   useEffect(() => {
     const elements = document.querySelectorAll<HTMLElement>('.js-reveal');
@@ -111,7 +120,7 @@ function App() {
         observer.unobserve(entry.target);
       }
     }, { threshold: .08, rootMargin: '0px 0px -24px 0px' });
-    elements.forEach((element) => { element.classList.remove('is-visible'); observer.observe(element); });
+    elements.forEach((element) => { if (!element.classList.contains('is-visible')) observer.observe(element); });
     return () => observer.disconnect();
   }, [mode, townIndex, range]);
 
@@ -124,20 +133,19 @@ function App() {
     <main id="uvod">
       <section className="hero">
         <div className="hero-content">
-          <h1>Zažij krajinu<br/><em>v její nejlepší podobě.</em></h1>
+          <h1>Ven za<br/><em>přírodou.</em></h1>
           <p>Kam vyrazit, když toužíš po zeleni nebo sněhu?</p>
           <a href="#objevovat" className="hero-link">Prozkoumat mapu <span><ArrowDownRight size={19}/></span></a>
         </div>
-        <div className="hero-image" style={nextHeroPlace ? { backgroundImage: `url("${heroImageUrl(nextHeroPlace)}")`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}>{heroPlaces.map((place, index) => <div ref={(node) => { heroSlideRefs.current[index] = node; }} key={place.id} className={`hero-slide ${index === heroIndex ? 'active' : ''}`} style={{ backgroundImage: `url("${heroImageUrl(place)}")` }} aria-hidden="true"/>)}{heroPlaces[heroIndex] && <a className="hero-photo-source" href={heroPlaces[heroIndex].imageSource} target="_blank" rel="noreferrer">{heroPlaces[heroIndex].name} · foto ↗</a>}</div>
+        <div className="hero-image">{heroPlaces.map((place, index) => <div ref={(node) => { heroSlideRefs.current[index] = node; }} key={place.id} className={`hero-slide ${index === heroIndex ? 'active' : ''} ${index === upcomingHeroIndex ? 'upcoming' : ''}`} style={{ backgroundImage: `url("${heroImageUrl(place)}")` }} aria-hidden="true"/>)}{heroPlaces[heroIndex] && <a className="hero-photo-source" href={heroPlaces[heroIndex].imageSource} target="_blank" rel="noreferrer">{heroPlaces[heroIndex].name} · foto ↗</a>}</div>
       </section>
 
       <section className="explore" id="objevovat">
-        <div className="section-heading js-reveal"><h2>Kam vyrazíme?</h2></div>
         <div className="explorer-shell">
           <div className="controls-panel">
-            <div className="mode-switch" role="group" aria-label="Režim výletu"><button className={mode === 'green' ? 'chosen' : ''} onClick={() => setMode('green')} aria-pressed={mode === 'green'}><Sprout size={20}/><span>Za zelení<small>Nejzelenější okolí</small></span></button><button className={mode === 'snow' ? 'chosen' : ''} onClick={() => setMode('snow')} aria-pressed={mode === 'snow'}><Snowflake size={20}/><span>Za sněhem<small>Nejvíce sněhu</small></span></button></div>
-            <label className="field-label" htmlFor="town">ODKUD VYRÁŽÍŠ?</label><div className="select-wrap"><MapPin size={18}/><select id="town" value={townIndex} onChange={(event) => setTownIndex(Number(event.target.value))}>{towns.map((item, index) => <option key={item.name} value={index}>{item.name}</option>)}</select><span>⌄</span></div>
-            <div className="range-head"><label className="field-label" htmlFor="range">JAK DALEKO CHCEŠ JET?</label><strong>{range} km</strong></div><input id="range" className="range-input" type="range" min="0" max={distanceOptions.length - 1} step="1" value={currentRangeIndex} onChange={(event) => setRangeIndex(Number(event.target.value))} style={{'--progress': `${distanceOptions.length === 1 ? 100 : currentRangeIndex / (distanceOptions.length - 1) * 100}%`} as React.CSSProperties}/><div className="range-labels">{distanceOptions.map((distance) => <span key={distance}>{distance}</span>)}</div>
+            <div className="mode-switch" role="group" aria-label="Režim výletu"><button className={mode === 'green' ? 'chosen' : ''} onClick={() => setMode('green')} aria-pressed={mode === 'green'}><Sprout size={28}/><span>Za zelení</span></button><button className={mode === 'snow' ? 'chosen' : ''} onClick={() => setMode('snow')} aria-pressed={mode === 'snow'}><Snowflake size={28}/><span>Za sněhem</span></button></div>
+            <label className="sr-only" htmlFor="town">Výchozí obec</label><div className="select-wrap"><MapPin size={24}/><select id="town" value={townIndex} onChange={(event) => setTownIndex(Number(event.target.value))}>{towns.map((item, index) => <option key={item.name} value={index}>{item.name}</option>)}</select><span>⌄</span></div>
+            <div className="range-head"><label className="sr-only" htmlFor="range">Maximální vzdálenost</label><strong>Do {range} km</strong></div><input id="range" className="range-input" type="range" min="0" max={distanceOptions.length - 1} step="1" value={currentRangeIndex} onChange={(event) => setRangeIndex(Number(event.target.value))} style={{'--progress': `${distanceOptions.length === 1 ? 100 : currentRangeIndex / (distanceOptions.length - 1) * 100}%`} as React.CSSProperties}/><div className="range-labels">{distanceOptions.map((distance) => <span key={distance}>{distance}</span>)}</div>
           </div>
           <div className="map-panel"><MapContainer center={[49.52, 13.12]} zoom={7.5} minZoom={7.5} zoomSnap={0.5} maxBounds={regionBounds} maxBoundsViscosity={1} scrollWheelZoom={true} className="map" zoomControl={false}>
             <ZoomControl position="topright"/>
@@ -149,27 +157,27 @@ function App() {
             {[...display.map((item) => item.place), ...outside.map((item) => item.place)].map((place) => { const rank = results.findIndex((result) => result.place.id === place.id); const inRange = distanceKm(town.coordinates, place.coordinates) <= range; return <Marker key={place.id} position={place.coordinates} icon={pin(selectedId === place.id, mode, inRange, inRange, rank >= 0 ? rank + 1 : undefined)} eventHandlers={{click: () => setSelectedId(place.id)}}/>; })}
             {selected && <Circle center={selected.coordinates} radius={250} pathOptions={{color: mode === 'green' ? '#4f7351' : '#4d8ba3', fillColor: mode === 'green' ? '#84ae81' : '#a8d4e5', fillOpacity: .26, weight: 2}}/>}
           </MapContainer><div className="map-overlay"><LocateFixed size={15}/> {town.name} <span>·</span> {eligibleCount} {eligibleCount === 1 ? 'místo' : 'míst'} v dosahu</div>{tileError && <div className="map-error" role="status">Mapový podklad se nenačetl. Body výletů zůstávají dostupné v kartách.</div>}
-          {selected ? <div className="selected-note" role="region" aria-label={`Trasy k místu ${selected.name}`}>
+          {selected && <div className="selected-note" role="region" aria-label={`Trasy k místu ${selected.name}`}>
             <div className="selected-note-head"><Compass size={18}/><span><strong>{selected.name}</strong><small>Okolí 250 m · <a href={selected.accessSource} target="_blank" rel="noreferrer">Ověřit přístup ↗</a></small></span><button className="selection-close" type="button" onClick={() => setSelectedId(null)} aria-label="Zavřít vybrané místo"><X size={17}/></button></div>
             <div className="route-actions"><a href={directionsUrl(town.coordinates, selected.coordinates, 'walking')} target="_blank" rel="noreferrer">Trasa pěšky <ArrowUpRight size={14}/></a><a href={directionsUrl(town.coordinates, selected.coordinates, 'driving')} target="_blank" rel="noreferrer">Trasa autem <ArrowUpRight size={14}/></a></div>
-          </div> : <div className="map-key"><span className="key-origin"/> start <span className="key-place"/> v dosahu <span className="key-out"/> mimo dosah</div>}</div>
+            <details className="selected-sources"><summary>Zdroje a měření</summary>
+              {selectedMeasurement && <p>{mode === 'green' ? `NDVI ${selectedMeasurement.value.toFixed(2).replace('.', ',')}` : `Sníh ${Math.round(selectedMeasurement.value)} %`} · platná plocha {Math.round(selectedMeasurement.validFraction * 100)} % · oblačnost {Math.round(selectedMeasurement.cloudFraction * 100)} % · snímek {new Date(selectedMeasurement.date).toLocaleDateString('cs-CZ')}{mode === 'snow' && isOld(selectedMeasurement.date) && ' · Historický snímek nevypovídá o dnešním sněhu.'}</p>}
+              {selectedMeasurement && <><a href={browserUrl(selected, selectedMeasurement)} target="_blank" rel="noreferrer">Zobrazit oblast v Copernicus Browser <ExternalLink size={12}/></a><p title={selectedMeasurement.source}>ID produktu: {selectedMeasurement.sceneId}</p></>}
+              {selected.imageSource && <a href={selected.imageSource} target="_blank" rel="noreferrer">Foto: {selected.imageCredit} <ExternalLink size={12}/></a>}
+              {selected.sourceUrl && <a href={selected.sourceUrl} target="_blank" rel="noreferrer">Údaje: {selected.sourceLabel ?? 'zdroj'} <ExternalLink size={12}/></a>}
+              <a href={selected.osm} target="_blank" rel="noreferrer">Poloha v OpenStreetMap <ExternalLink size={12}/></a>
+            </details>
+          </div>}</div>
         </div>
-        <div className="results-header"><h2>{results.length ? 'Tvoje tipy na výlet' : 'Místa, která můžeš objevit'}</h2>{eligibleCount === 0 && <p>V tomto dosahu zatím nemáme výletní cíl.</p>}</div>
+        {eligibleCount === 0 && <p className="empty-results">V tomto dosahu zatím nemáme výletní cíl.</p>}
         <div className="cards">{display.map((item) => <article className={`place-card js-reveal ${selectedId === item.place.id ? 'selected' : ''}`} key={item.place.id}>
           <button className="card-select" onClick={() => { setSelectedId(item.place.id); document.querySelector('.map-panel')?.scrollIntoView({ behavior: 'smooth', block: 'end' }); }} aria-label={`Zobrazit ${item.place.name} na mapě`}>
-            <div className={`card-image ${item.place.image ? '' : 'image-placeholder'}`} style={item.place.image ? { backgroundImage: `url("${item.place.image}")` } : undefined}><span className="card-number">{item.measured ? `TOP ${item.rank}` : 'TIP'}</span>{!item.place.image && <span className="image-missing">Fotografie není dostupná</span>}<span className="card-arrow"><ArrowUpRight size={20}/></span></div>
-            <div className="card-body"><span className="card-category">{item.place.category} <span>·</span> {item.distance.toFixed(1).replace('.', ',')} km vzdušně</span><h3>{item.place.name}</h3><p>{item.place.description}</p>
-              <div className="card-metric"><span>{item.measurement ? themeLabel : 'SATELITNÍ DATA'}</span>{item.measurement ? <MetricSymbols mode={mode} value={item.measurement.value}/> : <strong>Nedostupná</strong>}</div>
-              <div className="card-date">{item.measurement ? <>Snímek {new Date(item.measurement.date).toLocaleDateString('cs-CZ')} {isOld(item.measurement.date) && (mode === 'snow' ? ' · ARCHIVNÍ' : ' · STARŠÍ SNÍMEK')}{!item.measured && ' · MIMO SROVNÁVACÍ OBDOBÍ'}</> : 'Bez ověřeného satelitního měření'}</div>
+            <div className={`card-image ${item.place.image ? '' : 'image-placeholder'}`} style={item.place.image ? { backgroundImage: `url("${item.place.image}")` } : undefined}><span className="card-distance" title="Vzdušná vzdálenost">{Math.round(item.distance)} km</span></div>
+            <div className="card-body"><h3>{item.place.name}</h3><p>{item.place.description}</p>
+              <div className="card-metric">{item.measurement ? <MetricSymbols mode={mode} value={item.measurement.value}/> : <span className="card-unmeasured">Bez satelitního měření</span>}</div>
+              {item.measurement && <div className="card-date">Snímek {new Date(item.measurement.date).toLocaleDateString('cs-CZ')}{mode === 'snow' && isOld(item.measurement.date) && ' · archivní'}</div>}
             </div>
           </button>
-          <details className="card-details"><summary>Podrobnosti a zdroje</summary>
-            {item.measurement && <p>{mode === 'green' ? `NDVI ${item.measurement.value.toFixed(2).replace('.', ',')}` : `Sníh ${Math.round(item.measurement.value)} %`} · platná plocha {Math.round(item.measurement.validFraction * 100)} % · oblačnost {Math.round(item.measurement.cloudFraction * 100)} %{mode === 'snow' && isOld(item.measurement.date) && ' · Historický snímek nevypovídá o dnešním sněhu.'}</p>}
-            {item.measurement && <><a href={browserUrl(item.place, item.measurement)} target="_blank" rel="noreferrer">{mode === 'green' ? 'Prohlédnout oblast a datum v Copernicus Browser' : 'Otevřít Copernicus Browser · vybrat FSC'} <ExternalLink size={12}/></a><p title={item.measurement.source}>ID produktu: {item.measurement.sceneId}</p></>}
-            {item.place.imageSource && <a href={item.place.imageSource} target="_blank" rel="noreferrer">Foto: {item.place.imageCredit} <ExternalLink size={12}/></a>}
-            {item.place.sourceUrl && <a href={item.place.sourceUrl} target="_blank" rel="noreferrer">Údaje: {item.place.sourceLabel ?? 'zdroj'} <ExternalLink size={12}/></a>}
-            <a href={item.place.osm} target="_blank" rel="noreferrer">Poloha v OpenStreetMap <ExternalLink size={12}/></a>
-          </details>
         </article>)}</div>
       </section>
 

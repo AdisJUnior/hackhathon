@@ -36,7 +36,7 @@ test('snow without a stored result searches the previous winter', () => {
 
 test('all regional places enter a rotating sync queue', () => {
   const features = loadSyncFeatures();
-  assert.ok(features.length > 300);
+  assert.equal(features.length, 300);
   const dir = mkdtempSync(join(tmpdir(), 'kam-ven-queue-'));
   try {
     const db = openDatabase(join(dir, 'measurements.sqlite'));

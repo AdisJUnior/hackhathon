@@ -40,5 +40,5 @@ const places = source.features.filter((feature) => feature.geometry?.type === 'P
       imageCredit: 'Wikimedia Commons · autor a licence u souboru', sourceUrl, sourceLabel: 'Wikidata', country: 'CZ',
     };
   });
-writeFileSync(resolve(root, 'src/regional-places.json'), `${JSON.stringify(places)}\n`);
-console.log(`Uloženo ${places.length} cílů uvnitř Plzeňského kraje.`);
+writeFileSync(resolve(root, 'data/places-candidates.json'), `${JSON.stringify(places, null, 2)}\n`);
+console.log(`Uloženo ${places.length} kandidátů do data/places-candidates.json. Pevný katalog 300 cílů se nemění.`);

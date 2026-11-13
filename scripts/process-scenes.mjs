@@ -6,8 +6,13 @@ import { saveMeasurements } from './import-measurements.mjs';
 
 const input = process.argv.slice(2).find((arg) => arg !== '--');
 if (!input) throw new Error('Použití: pnpm process:scenes -- cesta/ke/scenam.json');
-const geojson = JSON.parse(readFileSync(resolve(import.meta.dirname, '../src/places.json'), 'utf8'));
-const places = geojson.features.map((feature) => ({ id: feature.id, coordinates: [feature.geometry.coordinates[1], feature.geometry.coordinates[0]] }));
+const root = resolve(import.meta.dirname, '..');
+const geojson = JSON.parse(readFileSync(resolve(root, 'src/places.json'), 'utf8'));
+const places = [
+  ...geojson.features.map((feature) => ({ id: feature.id, coordinates: [feature.geometry.coordinates[1], feature.geometry.coordinates[0]] })),
+  ...['regional-places.json', 'places-extra.json'].flatMap((file) => JSON.parse(readFileSync(resolve(root, 'src', file), 'utf8'))
+    .map((place) => ({ id: place.id, coordinates: place.coordinates }))),
+];
 const scenes = JSON.parse(readFileSync(resolve(input), 'utf8'));
 if (!Array.isArray(scenes)) throw new Error('Vstup musí být pole scén');
 
