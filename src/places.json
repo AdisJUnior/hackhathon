@@ -1,0 +1,76 @@
+{
+  "type": "FeatureCollection",
+  "name": "Výletní cíle Plzeňského kraje (OSM, ověřeno 2026-11-13)",
+  "features": [
+    {
+      "type": "Feature", "id": "cerchov",
+      "properties": {
+        "name": "Čerchov", "category": "Horský vrchol",
+        "osm": "https://www.openstreetmap.org/node/256939539",
+        "description": "Nejvyšší vrchol Českého lesa s rozhlednou a dalekými výhledy.",
+        "access": "Na vrchol vedou značené pěší trasy. Aktuální stav trasy ověřte před cestou.",
+        "accessSource": "https://kct.cz/den-ceskeho-lesa-nabidne-slavnostni-otevreni-chaty-na-cerchove-i-vyrocni-pivo/",
+        "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d8/Cerchov_Towers_02.jpg/330px-Cerchov_Towers_02.jpg",
+        "imageSource": "https://commons.wikimedia.org/wiki/File:Cerchov_Towers_02.jpg",
+        "imageCredit": "Schmid Marco / Emdee · CC BY-SA 3.0 de"
+      },
+      "geometry": { "type": "Point", "coordinates": [12.7837268, 49.3833361] }
+    },
+    {
+      "type": "Feature", "id": "cerne-jezero",
+      "properties": {
+        "name": "Černé jezero", "category": "Ledovcové jezero",
+        "osm": "https://www.openstreetmap.org/way/29503960",
+        "description": "Tiché ledovcové jezero pod strmou jezerní stěnou.",
+        "access": "K jezeru vede značená pěší trasa. V rezervaci se nechodí mimo značené cesty; zimní přístup se může lišit.",
+        "accessSource": "https://www.npsumava.cz/vylet/ledovcova-jezera-cerne-a-certovo/",
+        "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a9/%C4%8Cern%C3%A9_jezero_zab%C3%ADran%C3%A9_z_karov%C3%A9_st%C4%9Bny.JPG/330px-%C4%8Cern%C3%A9_jezero_zab%C3%ADran%C3%A9_z_karov%C3%A9_st%C4%9Bny.JPG",
+        "imageSource": "https://commons.wikimedia.org/wiki/File:%C4%8Cern%C3%A9_jezero_zab%C3%ADran%C3%A9_z_karov%C3%A9_st%C4%9Bny.JPG",
+        "imageCredit": "Mgr. Zdeněk Kubeš · CC BY-SA 3.0"
+      },
+      "geometry": { "type": "Point", "coordinates": [13.1822816, 49.1791401] }
+    },
+    {
+      "type": "Feature", "id": "prasily",
+      "properties": {
+        "name": "Prášilské jezero", "category": "Ledovcové jezero",
+        "osm": "https://www.openstreetmap.org/way/51219582",
+        "description": "Šumavské jezero schované mezi lesy a horskými svahy.",
+        "access": "Od Prášil vede k jezeru červená pěší trasa. V klidovém území zůstaňte na značené cestě.",
+        "accessSource": "https://www.npsumava.cz/vylet/k-prasilskemu-jezeru-a-na-polednik/",
+        "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b4/Pr%C3%A1%C5%A1ilsk%C3%A9-jezero1.jpg/330px-Pr%C3%A1%C5%A1ilsk%C3%A9-jezero1.jpg",
+        "imageSource": "https://commons.wikimedia.org/wiki/File:Pr%C3%A1%C5%A1ilsk%C3%A9-jezero1.jpg",
+        "imageCredit": "Mgr. Zdeněk Kubeš · CC BY 2.5"
+      },
+      "geometry": { "type": "Point", "coordinates": [13.4000368, 49.0753498] }
+    },
+    {
+      "type": "Feature", "id": "pancir",
+      "properties": {
+        "name": "Pancíř", "category": "Horský vrchol",
+        "osm": "https://www.openstreetmap.org/node/568265874",
+        "description": "Hřebenový vrchol nad Železnou Rudou s rozhlednou.",
+        "access": "Pěšky po modré ze Železné Rudy nebo po červené ze Špičáckého sedla. Provoz lanovky a rozhledny ověřte.",
+        "accessSource": "https://www.chatapancir.cz/rozhledna/",
+        "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e8/Panc%C3%AD%C5%99.jpg/330px-Panc%C3%AD%C5%99.jpg",
+        "imageSource": "https://commons.wikimedia.org/wiki/File:Panc%C3%AD%C5%99.jpg",
+        "imageCredit": "Dingoa · CC BY-SA 3.0"
+      },
+      "geometry": { "type": "Point", "coordinates": [13.2532300, 49.1779255] }
+    },
+    {
+      "type": "Feature", "id": "radyne",
+      "properties": {
+        "name": "Radyně", "category": "Hrad a vyhlídka",
+        "osm": "https://www.openstreetmap.org/way/29010769",
+        "description": "Kamenná dominanta nad Starým Plzencem, blízko Plzně.",
+        "access": "K hradu vede pěší cesta. Vstup do hradu má sezónní otevírací dobu; před návštěvou ji ověřte.",
+        "accessSource": "https://www.hrad-radyne.cz/kontakt/",
+        "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/51/Radyn%C4%9B_hrad_od_jihu_4.jpg/330px-Radyn%C4%9B_hrad_od_jihu_4.jpg",
+        "imageSource": "https://commons.wikimedia.org/wiki/File:Radyn%C4%9B_hrad_od_jihu_4.jpg",
+        "imageCredit": "VitVit · CC BY-SA 4.0"
+      },
+      "geometry": { "type": "Point", "coordinates": [13.4651091, 49.6809967] }
+    }
+  ]
+}
