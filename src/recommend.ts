@@ -20,6 +20,7 @@ export function distanceKm(a: [number, number], b: [number, number]): number {
 
 export function validMeasurement(m: Measurement, mode: Mode): boolean {
   return m.mode === mode && m.product === (mode === 'green' ? 'S2-L2A-NDVI' : 'CLMS-FSC-20M') &&
+    (mode !== 'snow' || /-(?:12|01|02)-/.test(m.date)) &&
     m.statistic === (mode === 'green' ? 'median' : 'mean') && m.radiusMeters === 250 &&
     m.provenance === 'precomputed' && Boolean(m.sceneId?.trim()) && /^https:\/\//.test(m.source) &&
     Number.isFinite(m.value) && m.value >= (mode === 'green' ? -1 : 0) && m.value <= (mode === 'green' ? 1 : 100) &&
@@ -44,7 +45,7 @@ export function recommend(places: Place[], town: Town, rangeKm: number, mode: Mo
   });
   const referenceDate = Math.max(...candidates.map((item) => Date.parse(item.measurement.date)));
   return candidates.filter((item) => referenceDate - Date.parse(item.measurement.date) <= MAX_DATE_GAP_DAYS * 86400000)
-    .sort((a, b) => b.measurement.value - a.measurement.value || a.distance - b.distance).slice(0, 7);
+    .sort((a, b) => b.measurement.value - a.measurement.value || a.distance - b.distance).slice(0, 6);
 }
 
 export function nearby(places: Place[], town: Town, rangeKm: number) {
@@ -64,7 +65,7 @@ const snowPriority: Record<string, number> = {
   'Zoo a akvárium': 1, 'Klášter': 1, 'Turistická atrakce': 1,
 };
 export function visibleLimit(rangeKm: number) {
-  return rangeKm <= 5 ? 5 : 7;
+  return rangeKm <= 5 ? 5 : 6;
 }
 
 export function explore(places: Place[], town: Town, rangeKm: number, mode: Mode, measurements: Measurement[]) {

@@ -10,3 +10,5 @@ data/places-candidates.json
 src/measurements.json.tmp
 node_modules/
 dist/
+.neon
+data/neon-sync.sql

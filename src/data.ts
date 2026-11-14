@@ -25,6 +25,7 @@ export type Measurement = {
   mode: Mode;
   value: number;
   date: string;
+  observedAt?: string | null; // UTC time of the satellite scene, if the source provides it
   validFraction: number;
   cloudFraction: number;
   source: string;

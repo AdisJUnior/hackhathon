@@ -11,7 +11,8 @@
     "test": "node --experimental-strip-types --test src/*.test.ts scripts/*.test.mjs",
     "import:measurements": "node scripts/import-measurements.mjs",
     "process:scenes": "node --experimental-strip-types scripts/process-scenes.mjs",
-    "sync:data": "node scripts/copernicus-sync.mjs"
+    "sync:data": "node scripts/copernicus-sync.mjs",
+    "build:neon-sql": "node scripts/build-neon-bootstrap.mjs"
   },
   "devDependencies": {
     "@types/leaflet": "^1.9.22",

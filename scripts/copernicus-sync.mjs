@@ -23,13 +23,29 @@ const STATISTICS_URL = 'https://sh.dataspace.copernicus.eu/statistics/v1';
 const TOKEN_URL = 'https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token';
 const MIN_VALID = .7;
 const MAX_CLOUD = .3;
-const MAX_STATISTICS_PER_RUN = 16;
-const MAX_STATISTICS_PER_PLACE_MODE = 1;
-const MAX_TASKS_PER_RUN = 24;
+const DEFAULT_MAX_STATISTICS = 40;
+const DEFAULT_MAX_TASKS = 60;
 
 export function catalogWindows(now, mode, hasStoredMeasurement = false) {
-  const lookbackDays = mode === 'snow' && !hasStoredMeasurement ? 365 : mode === 'green' && !hasStoredMeasurement ? 90 : 30;
-  const stepDays = mode === 'snow' && !hasStoredMeasurement ? 60 : 30;
+  if (mode === 'snow') {
+    const year = now.getUTCFullYear();
+    const month = now.getUTCMonth();
+    const firstWinterYear = month === 11 ? year : year - 1;
+    const windows = [];
+    for (let winterYear = firstWinterYear; winterYear >= firstWinterYear - (hasStoredMeasurement ? 0 : 1); winterYear--) {
+      const start = new Date(Date.UTC(winterYear, 11, 1));
+      const lastFebruaryDay = new Date(Date.UTC(winterYear + 1, 2, 0, 23, 59, 59));
+      let to = new Date(Math.min(now.getTime(), lastFebruaryDay.getTime()));
+      while (to > start) {
+        const from = new Date(Math.max(start.getTime(), to.getTime() - 30 * 86400000));
+        windows.push({ from: from.toISOString(), to: to.toISOString() });
+        to = from;
+      }
+    }
+    return windows;
+  }
+  const lookbackDays = !hasStoredMeasurement ? 180 : 30;
+  const stepDays = 30;
   const windows = [];
   for (let daysBack = 0; daysBack < lookbackDays; daysBack += stepDays) {
     const from = new Date(now);
@@ -88,7 +104,19 @@ function evaluatePixel(s) {
 }`,
 };
 
-export function measurementFromStats(response, { placeId, mode, date, sceneId, source }) {
+export function sceneObservedAt({ mode, date, sceneId, observedAt }) {
+  if (typeof observedAt === 'string') {
+    const parsed = new Date(observedAt);
+    if (!Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === date) return parsed.toISOString();
+  }
+  if (mode !== 'green') return null;
+  const stamp = /^S2[ABCD]_MSIL2A_(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})_/.exec(sceneId);
+  if (!stamp) return null;
+  const parsed = new Date(`${stamp[1]}-${stamp[2]}-${stamp[3]}T${stamp[4]}:${stamp[5]}:${stamp[6]}Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === date ? parsed.toISOString() : null;
+}
+
+export function measurementFromStats(response, { placeId, mode, date, sceneId, source, observedAt }) {
   const outputs = response?.data?.[0]?.outputs;
   const metric = outputs?.metric?.bands?.B0?.stats;
   const coverage = outputs?.coverage?.bands?.B0?.stats;
@@ -101,7 +129,7 @@ export function measurementFromStats(response, { placeId, mode, date, sceneId, s
   if (!Number.isFinite(value) || !Number.isFinite(validFraction) || !Number.isFinite(cloudFraction) ||
       validFraction < MIN_VALID || validFraction > 1 || cloudFraction < 0 || cloudFraction > MAX_CLOUD ||
       validCount < 20) return null;
-  const measurement = { placeId, mode, value, date, validFraction, cloudFraction, source,
+  const measurement = { placeId, mode, value, date, observedAt: sceneObservedAt({ mode, date, sceneId, observedAt }), validFraction, cloudFraction, source,
     sceneId, provenance: 'precomputed', product: mode === 'green' ? 'S2-L2A-NDVI' : 'CLMS-FSC-20M',
     statistic: mode === 'green' ? 'median' : 'mean', radiusMeters: 250 };
   validate(measurement, 0);
@@ -118,16 +146,32 @@ function qualitySummary(response) {
   return `platné=${valid ?? '?'} / ${total ?? '?'}, oblačnost=${Number.isFinite(cloud) ? Math.round(cloud * 100) + '%' : '?'}`;
 }
 
+export function retryAfterMs(header, attempt) {
+  const reported = header == null ? NaN : Number(header);
+  return Number.isFinite(reported) && reported >= 0
+    ? Math.max(1000, reported + 300)
+    : Math.min(60000, 15000 * 2 ** attempt);
+}
+
 async function api(url, body, token) {
   const accept = url === CATALOG_URL ? 'application/geo+json' : 'application/json';
-  const response = await fetch(url, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: accept }, body: JSON.stringify(body), signal: AbortSignal.timeout(45000) });
-  if (!response.ok) {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const response = await fetch(url, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: accept }, body: JSON.stringify(body), signal: AbortSignal.timeout(45000) });
+    if (response.ok) return response.json();
+    const retryAfter = response.headers.get('retry-after');
+    if (response.status === 429 && attempt < 4) {
+      const delay = retryAfterMs(retryAfter, attempt);
+      if (delay <= 60000) {
+        console.info(`Copernicus omezil rychlost dotazů; čekám ${Math.ceil(delay / 1000)} s a opakuji.`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        continue;
+      }
+    }
     const error = new Error(`${new URL(url).pathname}: HTTP ${response.status} ${String(await response.text()).slice(0, 400)}`);
     error.status = response.status;
-    error.retryAfter = response.headers.get('retry-after');
+    error.retryAfter = retryAfter;
     throw error;
   }
-  return response.json();
 }
 
 async function accessToken() {
@@ -156,12 +200,20 @@ export function statisticsRequest(mode, geometry, date) {
 
 export function openDatabase(path) {
   const db = new DatabaseSync(path);
+  db.exec('PRAGMA busy_timeout=5000');
   db.exec(`CREATE TABLE IF NOT EXISTS measurements (
     place_id TEXT NOT NULL, mode TEXT NOT NULL, scene_id TEXT NOT NULL, date TEXT NOT NULL,
     value REAL NOT NULL, valid_fraction REAL NOT NULL, cloud_fraction REAL NOT NULL,
     source TEXT NOT NULL, product TEXT NOT NULL, statistic TEXT NOT NULL, radius_meters INTEGER NOT NULL,
-    acquired_at TEXT NOT NULL, PRIMARY KEY (place_id, mode, scene_id)
+    acquired_at TEXT NOT NULL, observed_at TEXT, PRIMARY KEY (place_id, mode, scene_id)
   )`);
+  if (!db.prepare('PRAGMA table_info(measurements)').all().some((column) => column.name === 'observed_at'))
+    db.exec('ALTER TABLE measurements ADD COLUMN observed_at TEXT');
+  for (const row of db.prepare('SELECT place_id, mode, scene_id, date FROM measurements WHERE observed_at IS NULL').all()) {
+    const observedAt = sceneObservedAt({ mode: row.mode, date: row.date, sceneId: row.scene_id });
+    if (observedAt) db.prepare('UPDATE measurements SET observed_at=? WHERE place_id=? AND mode=? AND scene_id=?')
+      .run(observedAt, row.place_id, row.mode, row.scene_id);
+  }
   db.exec(`CREATE TABLE IF NOT EXISTS scene_checks (
     place_id TEXT NOT NULL, mode TEXT NOT NULL, scene_id TEXT NOT NULL, checked_at TEXT NOT NULL,
     PRIMARY KEY (place_id, mode, scene_id)
@@ -212,9 +264,11 @@ export function markChecked(db, placeId, mode, sceneId) {
 
 export function saveMeasurement(db, m) {
   validate(m, 0);
-  db.prepare(`INSERT OR IGNORE INTO measurements VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).run(
+  db.prepare(`INSERT OR IGNORE INTO measurements
+    (place_id, mode, scene_id, date, value, valid_fraction, cloud_fraction, source, product, statistic, radius_meters, acquired_at, observed_at)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
     m.placeId, m.mode, m.sceneId, m.date, m.value, m.validFraction, m.cloudFraction,
-    m.source, m.product, m.statistic, m.radiusMeters, new Date().toISOString());
+    m.source, m.product, m.statistic, m.radiusMeters, new Date().toISOString(), m.observedAt ?? sceneObservedAt(m));
 }
 
 export function importExisting(db, measurements) {
@@ -225,9 +279,10 @@ export function importExisting(db, measurements) {
 
 export function exportLatest(db, destination) {
   const rows = db.prepare(`SELECT place_id AS placeId, mode, value, date, valid_fraction AS validFraction,
-    cloud_fraction AS cloudFraction, source, scene_id AS sceneId, product, statistic,
+    observed_at AS observedAt, cloud_fraction AS cloudFraction, source, scene_id AS sceneId, product, statistic,
     radius_meters AS radiusMeters FROM (
       SELECT *, ROW_NUMBER() OVER (PARTITION BY place_id, mode ORDER BY date DESC, acquired_at DESC) AS rn FROM measurements
+      WHERE mode != 'snow' OR strftime('%m', date) IN ('12', '01', '02')
     ) WHERE rn = 1 ORDER BY placeId, mode`).all();
   const data = rows.map((row) => ({ ...row, provenance: 'precomputed' }));
   data.forEach(validate);
@@ -237,9 +292,18 @@ export function exportLatest(db, destination) {
   return data;
 }
 
-export async function sync({ now = new Date(), log = console, modes = ['snow', 'green'] } = {}) {
+export async function sync({ now = new Date(), log = console, modes = ['green', 'snow'],
+  maxTasks = DEFAULT_MAX_TASKS, maxStatistics = DEFAULT_MAX_STATISTICS, maxScenesPerPlaceMode = 2,
+  placeIds = null } = {}) {
+  if (!Number.isSafeInteger(maxTasks) || maxTasks < 1 || maxTasks > 600 ||
+      !Number.isSafeInteger(maxStatistics) || maxStatistics < 1 || maxStatistics > 120 ||
+      !Number.isSafeInteger(maxScenesPerPlaceMode) || maxScenesPerPlaceMode < 1 || maxScenesPerPlaceMode > 5)
+    throw new Error('Neplatný limit synchronizační dávky.');
   const token = await accessToken();
-  const features = loadSyncFeatures();
+  const allFeatures = loadSyncFeatures();
+  const features = placeIds ? allFeatures.filter((feature) => placeIds.includes(feature.id)) : allFeatures;
+  if (!features.length || placeIds?.some((id) => !features.some((feature) => feature.id === id)))
+    throw new Error('Zadané místo nebylo nalezeno v pevném katalogu.');
   const databasePath = resolve(root, 'data/measurements.sqlite');
   mkdirSync(resolve(root, 'data'), { recursive: true });
   const db = openDatabase(databasePath);
@@ -251,10 +315,10 @@ export async function sync({ now = new Date(), log = console, modes = ['snow', '
   try {
     importExisting(db, JSON.parse(readFileSync(resolve(root, 'src/measurements.json'), 'utf8')));
     outer: for (const { feature, mode } of syncQueue(db, features, modes)) {
-        if (attempted >= MAX_TASKS_PER_RUN) break;
+        if (attempted >= maxTasks) break;
         const geometry = circle([feature.geometry.coordinates[1], feature.geometry.coordinates[0]]);
         try {
-          const hasStoredMeasurement = Boolean(db.prepare('SELECT 1 FROM measurements WHERE place_id=? AND mode=? LIMIT 1').get(feature.id, mode));
+          const hasStoredMeasurement = Boolean(db.prepare("SELECT 1 FROM measurements WHERE place_id=? AND mode=? AND (mode != 'snow' OR strftime('%m', date) IN ('12', '01', '02')) LIMIT 1").get(feature.id, mode));
           let finished = false;
           let placeRequests = 0;
           for (const window of catalogWindows(now, mode, hasStoredMeasurement)) {
@@ -266,7 +330,12 @@ export async function sync({ now = new Date(), log = console, modes = ['snow', '
               const date = item.properties?.datetime?.slice(0, 10);
               if (date) byDate.set(date, [...(byDate.get(date) ?? []), item]);
             }
-            for (const [date, items] of [...byDate].sort(([a], [b]) => b.localeCompare(a))) {
+            const cloudRank = (items) => {
+              const rawCloud = items[0]?.properties?.['eo:cloud_cover'];
+              const cloud = rawCloud == null ? NaN : Number(rawCloud);
+              return Number.isFinite(cloud) ? cloud <= 30 ? 0 : 2 : 1;
+            };
+            for (const [date, items] of [...byDate].sort(([a, ai], [b, bi]) => cloudRank(ai) - cloudRank(bi) || b.localeCompare(a))) {
               // A single catalog item prevents attributing a daily mosaic to an arbitrary scene.
               if (items.length !== 1) continue;
               const item = items[0];
@@ -274,13 +343,13 @@ export async function sync({ now = new Date(), log = console, modes = ['snow', '
               if (exists) { finished = true; break; }
               const checked = db.prepare('SELECT 1 FROM scene_checks WHERE place_id=? AND mode=? AND scene_id=?').get(feature.id, mode, item.id);
               if (checked) continue;
-              if (requests >= MAX_STATISTICS_PER_RUN) { log.info('Dosažen limit dotazů pro tento běh; další scény počkají na další spuštění.'); break outer; }
+              if (requests >= maxStatistics) { log.info('Dosažen limit dotazů pro tento běh; další scény počkají na další spuštění.'); break outer; }
               requests++;
               placeRequests++;
               const stats = await api(STATISTICS_URL, statisticsRequest(mode, geometry, date), token);
               const source = item.links?.find((link) => link.rel === 'self' && link.href?.startsWith('https://'))?.href ??
                 `https://sh.dataspace.copernicus.eu/catalog/v1/collections/${COLLECTIONS[mode]}/items/${encodeURIComponent(item.id)}`;
-              const measurement = measurementFromStats(stats, { placeId: feature.id, mode, date, sceneId: item.id, source });
+              const measurement = measurementFromStats(stats, { placeId: feature.id, mode, date, sceneId: item.id, source, observedAt: item.properties?.datetime });
               if (!measurement) {
                 markChecked(db, feature.id, mode, item.id);
                 log.info(`${feature.id}/${mode}/${date}: vyřazeno (${qualitySummary(stats)})`);
@@ -290,9 +359,9 @@ export async function sync({ now = new Date(), log = console, modes = ['snow', '
                 log.info(`${feature.id}/${mode}/${date}: přijato ${measurement.value.toFixed(3)}`);
                 finished = true;
               }
-              if (finished || placeRequests >= MAX_STATISTICS_PER_PLACE_MODE) break;
+              if (finished || placeRequests >= maxScenesPerPlaceMode) break;
             }
-            if (finished || placeRequests >= MAX_STATISTICS_PER_PLACE_MODE) break;
+            if (finished || placeRequests >= maxScenesPerPlaceMode) break;
           }
         } catch (error) {
           errors++;
@@ -313,12 +382,19 @@ export async function sync({ now = new Date(), log = console, modes = ['snow', '
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   const args = process.argv.slice(2);
   const asOf = args.indexOf('--as-of');
+  const placesArg = args.find((arg) => arg.startsWith('--places='));
+  const scenesArg = args.find((arg) => arg.startsWith('--scenes='));
+  const placeIds = placesArg ? placesArg.slice('--places='.length).split(',').filter(Boolean) : null;
+  const maxScenes = scenesArg ? Number(scenesArg.slice('--scenes='.length)) : args.includes('--backfill') ? 3 : 2;
   const now = asOf >= 0 ? new Date(`${args[asOf + 1]}T23:59:59Z`) : new Date();
   if (Number.isNaN(now.getTime())) {
     console.error('Neplatné datum za --as-of; použijte YYYY-MM-DD.');
     process.exitCode = 1;
   } else {
-    sync({ now, modes: args.includes('--snow-only') ? ['snow'] : ['snow', 'green'] })
+    sync({ now, modes: args.includes('--snow-only') ? ['snow'] : args.includes('--green-only') ? ['green'] : ['green', 'snow'],
+      maxTasks: args.includes('--backfill') ? 120 : DEFAULT_MAX_TASKS,
+      maxStatistics: args.includes('--backfill') ? 80 : DEFAULT_MAX_STATISTICS,
+      maxScenesPerPlaceMode: maxScenes, placeIds })
       .catch((error) => { console.error(error.message); process.exitCode = 1; });
   }
 }

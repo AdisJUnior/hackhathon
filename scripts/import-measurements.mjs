@@ -23,6 +23,12 @@ export function validate(item, index) {
   if (typeof item.cloudFraction !== 'number' || !Number.isFinite(item.cloudFraction) || item.cloudFraction < 0 || item.cloudFraction > .3) fail('neplatná nebo vysoká oblačnost');
   const parsedDate = typeof item.date === 'string' ? new Date(`${item.date}T00:00:00.000Z`) : new Date(NaN);
   if (typeof item.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(item.date) || Number.isNaN(parsedDate.getTime()) || parsedDate.toISOString().slice(0, 10) !== item.date) fail('neplatné datum');
+  if (item.observedAt != null) {
+    const observed = typeof item.observedAt === 'string' ? new Date(item.observedAt) : new Date(NaN);
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(item.observedAt) ||
+        Number.isNaN(observed.getTime()) || observed.toISOString().slice(0, 10) !== item.date)
+      fail('neplatný čas pořízení snímku');
+  }
   if (typeof item.sceneId !== 'string' || !item.sceneId.trim()) fail('chybí identifikátor scény');
   if (typeof item.source !== 'string' || !/^https:\/\//.test(item.source)) fail('source musí být HTTPS URL produktu');
 }

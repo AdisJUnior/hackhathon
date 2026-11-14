@@ -10,3 +10,5 @@ if ($LASTEXITCODE -ne 0) { throw 'Synchronizace Copernicus selhala.' }
 if ($LASTEXITCODE -ne 0) { throw 'Kontrola TypeScriptu selhala.' }
 & $NodePath (Join-Path $projectRoot 'node_modules/vite/bin/vite.js') build
 if ($LASTEXITCODE -ne 0) { throw 'Sestavení aplikace selhalo.' }
+& (Join-Path $PSScriptRoot 'push-neon.ps1') -NodePath $NodePath
+if ($LASTEXITCODE -ne 0) { throw 'Přenos do Neonu selhal.' }

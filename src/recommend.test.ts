@@ -42,6 +42,7 @@ test('green and snow rank by their own metric', () => {
 test('zero snow is valid; missing and low quality readings are excluded', () => {
   const base = testMeasurements.find((m) => m.mode === 'snow')!;
   assert.equal(validMeasurement({ ...base, value: 0 }, 'snow'), true);
+  assert.equal(validMeasurement({ ...base, date: '2026-10-29', value: 0 }, 'snow'), false);
   assert.equal(validMeasurement({ ...base, value: NaN }, 'snow'), false);
   assert.equal(validMeasurement({ ...base, validFraction: .69 }, 'snow'), false);
   assert.equal(validMeasurement({ ...base, cloudFraction: .31 }, 'snow'), false);
@@ -67,16 +68,16 @@ test('latest valid result wins per place', () => {
   assert.equal(recommend([places[0]], towns[2], 100, 'green', measurements)[0].measurement.value, .5);
 });
 
-test('shows seven places at 100 km but ranks only the one with valid satellite data', () => {
+test('shows six places at 100 km but ranks only the one with valid satellite data', () => {
   const actual = testMeasurements.filter((m) => m.placeId === 'prasily' && m.mode === 'green');
   const { ranked, visible } = explore(places, towns[0], 100, 'green', actual);
   assert.equal(ranked.length, 1);
-  assert.equal(visible.length, 7);
+  assert.equal(visible.length, 6);
   assert.equal(visible[0].place.id, 'prasily');
   assert.equal(visible[0].rank, 1);
   assert.equal(visible.filter((item) => item.measured).length, 1);
   assert.ok(visible.slice(1).every((item) => item.measurement === null && item.rank === null));
-  assert.equal(new Set(visible.map((item) => item.place.id)).size, 7);
+  assert.equal(new Set(visible.map((item) => item.place.id)).size, 6);
 });
 
 test('every departure town offers exactly five destinations within 5 km', () => {
