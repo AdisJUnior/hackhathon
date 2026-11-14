@@ -42,7 +42,7 @@ export function OrbitMethodVisual() {
         <g className="satellite-panels" fill="#90b7ad" fillOpacity=".38" stroke="none"><rect x="-27" y="14" width="27" height="17"/><rect x="34" y="14" width="27" height="17"/></g>
         <path d="M 0 14 H -27 V 31 H 0 M 34 14 H 61 V 31 H 34 M 17 8 L 30 -7"/><circle cx="17" cy="22" r="5" fill="#a9c6c0"/>
       </g>
-      <text x="192" y="108" fill="#56736a" fontSize="15">Sentinel‑2</text>
+      <text x="185" y="18" fill="#56736a" fontSize="13">Sentinel‑2</text>
     </svg>
     <svg className="orbit-mobile" viewBox="0 0 390 300" role="presentation" focusable="false">
       <defs>
@@ -72,7 +72,7 @@ export function OrbitMethodVisual() {
       <path className="orbit-reflection nir" d="M 153 128 Q 136 97 126 60" fill="none" stroke="#9d91bb" strokeWidth="2" strokeLinecap="round"/>
       <g className="near-satellite" transform="translate(116 26)" fill="none" stroke="#547068" strokeWidth="2.3" strokeLinejoin="round"><rect x="0" y="8" width="28" height="24" rx="4" fill="#f0f5ed"/><g className="satellite-panels" fill="#90b7ad" fillOpacity=".38" stroke="none"><rect x="-20" y="13" width="20" height="14"/><rect x="28" y="13" width="20" height="14"/></g><path d="M 0 13 H -20 V 27 H 0 M 28 13 H 48 V 27 H 28 M 14 8 L 25 -4"/><circle cx="14" cy="20" r="4" fill="#9bbdb4"/></g>
       <g className="far-satellite" transform="translate(335 225) scale(.48)" fill="none" stroke="#668786" strokeWidth="2.3" strokeLinejoin="round"><rect x="0" y="8" width="28" height="24" rx="4" fill="#f0f5ed"/><g className="satellite-panels" fill="#90b7ad" fillOpacity=".38" stroke="none"><rect x="-20" y="13" width="20" height="14"/><rect x="28" y="13" width="20" height="14"/></g><path d="M 0 13 H -20 V 27 H 0 M 28 13 H 48 V 27 H 28 M 14 8 L 25 -4"/></g>
-      <text x="94" y="76" fill="#56736a" fontSize="13">Sentinel‑2</text>
+      <text x="94" y="16" fill="#56736a" fontSize="11">Sentinel‑2</text>
     </svg>
   </div>;
 }

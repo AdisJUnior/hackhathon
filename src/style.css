@@ -255,8 +255,8 @@ html,body,body *,body *::before,body *::after{font-family:'Times New Roman',Time
 @media(max-width:600px){.footer-top{grid-template-columns:1fr;gap:8px;padding-bottom:30px}.footer-top .footer-logo{width:210px;height:140px}.footer-top>p{max-width:440px;margin:0;text-align:left;font-size:29px}}
 
 .app .method{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:7px;overflow:hidden;padding:clamp(24px,4svh,46px) max(5.2%,calc((100vw - 1344px)/2)) clamp(20px,3svh,35px);background:#f7f7f2}
-.method-intro{align-self:center;width:min(100%,830px)}
-.orbit-visual{align-self:center;width:min(100%,830px);aspect-ratio:900/310;overflow:visible;background:transparent}
+.method-intro{align-self:center;width:min(100%,1120px);min-height:105px}
+.orbit-visual{position:relative;left:-55px;align-self:center;width:min(100%,830px);aspect-ratio:900/310;overflow:visible;background:transparent}
 .orbit-desktop{display:block;width:100%;height:100%}
 .orbit-mobile{display:none}
 .earth-drift{will-change:transform}
@@ -290,5 +290,69 @@ html,body{scroll-behavior:auto;overflow-anchor:none}
 @keyframes orbit-float{0%,100%{translate:0 0}50%{translate:8px -10px}}
 @keyframes orbit-far-float{0%,100%{translate:0 0}50%{translate:-12px 8px}}
 @keyframes orbit-clouds{0%,100%{opacity:.3;translate:-4px 0}50%{opacity:.55;translate:5px 0}}
-@media(max-width:600px){.orbit-visual{width:100%;aspect-ratio:390/300}.app .method{gap:16px;padding:32px 18px}.method-intro{padding-top:72px}.orbit-desktop{display:none}.orbit-mobile{display:block;width:100%;height:100%}.method.is-active .orbit-mobile .earth-drift{animation:orbit-earth-mobile 23s linear infinite}}
+@media(max-width:600px){.orbit-visual{width:100%;aspect-ratio:390/300}.app .method{gap:16px;padding:32px 18px}.method-intro{padding-top:0}.orbit-desktop{display:none}.orbit-mobile{display:block;width:100%;height:100%}.method.is-active .orbit-mobile .earth-drift{animation:orbit-earth-mobile 23s linear infinite}}
 @keyframes orbit-earth-mobile{from{transform:translateX(0)}to{transform:translateX(-160px)}}
+
+/* The rays leave one leaf impact point and continue into the satellite optics. */
+.method-intro{position:relative}
+.surface-reflectance{position:absolute;top:-20px;right:0;z-index:2;width:min(100%,700px);height:190px;pointer-events:none}
+.surface-reflectance svg{display:block;width:100%;height:100%;overflow:visible}
+.detail-guide{opacity:.13}
+.detail-ray-in,.detail-ray-out{stroke-dasharray:7 13;opacity:0}
+.detail-ray-absorbed,.detail-impact,.detail-impact-ring{opacity:0}
+.method.is-active .detail-ray-in{animation:detail-flow 1.8s linear infinite,detail-in-stage 20s ease-in-out 1 both}
+.method.is-active .detail-ray-out{animation:detail-flow 1.8s linear infinite,detail-out-stage 20s ease-in-out 1 both}
+.method.is-active .detail-ray-out.nir{animation-duration:2s,20s}
+.method.is-active .detail-ray-out.red{animation-duration:2.1s,20s}
+.method.is-active .detail-ray-absorbed{animation:detail-absorb-flow 2.1s linear infinite,detail-absorb-stage 20s ease-in-out 1 both}
+.method.is-active .detail-ray-absorbed.second{animation-delay:.2s,0s}
+.method.is-active .detail-impact{animation:detail-hit 20s ease-in-out 1 both}
+.method.is-active .detail-impact-ring{animation:detail-hit-ring 20s ease-in-out 1 both;transform-origin:160px 64px}
+.method.is-active .detail-grass{animation:detail-grass-sway 7s ease-in-out infinite;transform-origin:161px 99px}
+.method.is-active .detail-grass-small{animation:detail-grass-sway 9s ease-in-out -2s infinite;transform-origin:160px 99px}
+.capture-trace{stroke-dasharray:4 6;opacity:0}
+.capture-storage{opacity:.2}
+.capture-lens-glow{opacity:0;transform-origin:582px -3px}
+.method.is-active .capture-satellite{animation:capture-appear 20s cubic-bezier(.38,0,.2,1) 1 both}
+.method.is-active .capture-panel{animation:panel-glint 7s ease-in-out infinite}
+.method.is-active .capture-trace{animation:detail-flow 1.8s linear infinite,capture-read 20s ease-in-out 1 both}
+.method.is-active .capture-trace.nir{animation-delay:.14s,0s}
+.method.is-active .capture-trace.red{animation-delay:.28s,0s}
+.method.is-active .capture-storage{animation:capture-store 20s ease-in-out 1 both}
+.method.is-active .capture-storage.nir{animation-delay:.18s}
+.method.is-active .capture-storage.red{animation-delay:.36s}
+.method.is-active .capture-lens-glow{animation:capture-lens 20s ease-in-out 1 both}
+@keyframes detail-flow{to{stroke-dashoffset:-20px}}
+@keyframes detail-absorb-flow{to{stroke-dashoffset:-14px}}
+@keyframes detail-in-stage{0%,7%,56%,100%{opacity:0}15%,47%{opacity:.88}}
+@keyframes detail-out-stage{0%,31%,94%,100%{opacity:0}43%,83%{opacity:.92}}
+@keyframes detail-absorb-stage{0%,28%,79%,100%{opacity:0}38%,65%{opacity:.68}}
+@keyframes detail-hit{0%,22%,72%,100%{opacity:0}32%,54%{opacity:.93}}
+@keyframes detail-hit-ring{0%,22%,72%,100%{opacity:0;scale:.65}35%{opacity:.64;scale:1.15}59%{opacity:.3;scale:1.5}}
+@keyframes detail-grass-sway{0%,100%{rotate:-1deg}50%{rotate:2deg}}
+@keyframes capture-appear{0%,40%{opacity:.08;translate:16px -10px}58%,100%{opacity:1;translate:0 0}}
+@keyframes capture-read{0%,37%,100%{opacity:0}52%,87%{opacity:.94}}
+@keyframes capture-store{0%,51%,100%{opacity:.2}64%,86%{opacity:.9}}
+@keyframes capture-lens{0%,36%,100%{opacity:0;scale:.72}55%,78%{opacity:.75;scale:1.12}90%{opacity:.2;scale:1}}
+@media(max-width:800px){.method-intro{display:flex;flex-direction:column;align-items:stretch;gap:10px;min-height:0}.orbit-visual{left:0}.surface-reflectance{position:relative;top:auto;right:auto;width:min(100%,700px);height:auto;aspect-ratio:700/190;align-self:flex-end}}
+@media(max-width:600px){.method-intro{gap:14px}.surface-reflectance{width:100%}}
+.method-heading{align-self:center;width:min(100%,1120px);margin:0;position:relative;z-index:2}
+.method-camera{position:relative;align-self:center;width:min(100%,1120px);height:300px;overflow:hidden}
+.method-world{position:relative;width:1360px;height:100%;transform-origin:0 0}
+.method-camera .orbit-visual{position:absolute;left:0;bottom:0;width:min(100%,830px);margin:0}
+.method-camera .surface-reflectance{position:absolute;top:0;right:0;width:min(100%,700px);height:190px;margin:0}
+.capture-data-link{opacity:.2}
+.capture-result-leaf,.capture-result-snow{opacity:.19}
+.method.is-active .capture-data-link{animation:capture-read 20s ease-in-out 1 both}
+.method.is-active .capture-result{animation:capture-icons-arrive 20s ease-in-out 1 both}
+.method.is-active .capture-result-leaf{animation:capture-leaf 20s ease-in-out 1 both}
+@keyframes capture-icons-arrive{0%,42%{opacity:0}60%,100%{opacity:1}}
+@keyframes capture-leaf{0%,68%{opacity:.19;filter:brightness(1)}80%,94%{opacity:1;filter:brightness(1.2)}100%{opacity:.78;filter:brightness(1)}}
+@media(max-width:1100px){.method-camera{height:auto}.method-world{display:flex;flex-direction:column;gap:16px;width:100%;height:auto}.method-camera .surface-reflectance{position:relative;top:auto;right:auto;width:min(100%,700px);height:auto;aspect-ratio:700/190;align-self:flex-end}.method-camera .orbit-visual{position:relative;left:0;bottom:auto;width:min(100%,830px);align-self:center}}
+@media(max-width:600px){.method-camera .surface-reflectance{width:100%}.method-camera .orbit-visual{width:100%}}
+.method.is-active .method-world{animation:method-track 20s cubic-bezier(.38,0,.2,1) 1 both;transform-origin:0 0}
+.method.is-active .capture-stage{animation:capture-spotlight 20s cubic-bezier(.38,0,.2,1) 1 both;transform-origin:615px -8px}
+@keyframes method-track{0%,7%,100%{transform:translate3d(0,0,0) scale(1)}17%,27%{transform:translate3d(-12px,0,0) scale(1.08)}44%,56%{transform:translate3d(-305px,-10px,0) scale(1.17)}72%,80%{transform:translate3d(-740px,8px,0) scale(1.28)}}
+@keyframes capture-spotlight{0%,62%,100%{transform:scale(1)}76%,85%{transform:scale(1.14)}}
+@media(max-width:1100px){.method.is-active .method-world{animation-name:method-track-mobile}}
+@keyframes method-track-mobile{0%,7%,100%{transform:translate3d(0,0,0) scale(1)}17%,27%{transform:translate3d(-4px,-7px,0) scale(1.03)}44%,56%{transform:translate3d(-6px,2px,0) scale(1.05)}72%,82%{transform:translate3d(-14px,7px,0) scale(1.07)}}

@@ -1,5 +1,7 @@
 # Technický audit aplikace Kam ven v Plzeňském kraji?
 
+> **Historický dokument.** Popisuje původní stav projektu ze 13. 11. 2026. Aktuální data, testy a nalezené problémy jsou v [auditu z 14. 11. 2026](AUDIT-2026-11-14.md).
+
 **Dodatek po auditu:** Přibyl `scripts/copernicus-sync.mjs` pro automatické dotazy na Sentinel Hub (Sentinel‑2 L2A a FSC BYOC), lokální SQLite archiv a denní úloha. Živý běh přes OAuth, katalog a statistické API přijal první NDVI pro Prášilské jezero ze snímku 5. 11. 2026; zimní FSC zatím nemá přijatý výsledek. Původní demonstrační hodnoty a ovládání ukázkového režimu byly z produkční aplikace odstraněny. Testovací hodnoty existují jen v automatických testech. Tvrzení níže o chybějícím automatickém sběru a demonstračním režimu popisují stav při původním auditu. Aktuální návod je v [README.md](README.md).
 
 Ověřeno 13. 11. 2026. Stav označuje skutečně doloženou schopnost této verze, nikoliv plánovaný vývoj.

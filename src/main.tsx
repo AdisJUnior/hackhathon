@@ -8,9 +8,9 @@ import './style.css';
 import { places, towns, type Measurement, type Mode, type Place } from './data';
 import imported from './measurements.json';
 import plzenBoundary from './plzen-boundary.json';
-import { distanceKm, explore } from './recommend';
+import { distanceKm, explore, validMeasurement } from './recommend';
 import { OrbitMethodVisual } from './OrbitMethodVisual';
-import { SensorInsight } from './SensorInsight';
+import { SurfaceReflectance } from './SurfaceReflectance';
 
 const importedMeasurements = imported as Measurement[];
 const regionRing = plzenBoundary.geometry.coordinates[0] as number[][];
@@ -130,7 +130,8 @@ function App() {
   const { ranked: results, visible: display, outside } = useMemo(() => explore(places, town, range, mode, importedMeasurements), [town, range, mode]);
   const selected = places.find((place) => place.id === selectedId) ?? null;
   const eligibleCount = places.filter((place) => distanceKm(town.coordinates, place.coordinates) <= range).length;
-  const selectedMeasurement = display.find((item) => item.place.id === selectedId)?.measurement ?? null;
+  const selectedMeasurement = importedMeasurements.filter((measurement) => measurement.placeId === selectedId && validMeasurement(measurement, mode))
+    .sort((a, b) => b.date.localeCompare(a.date))[0] ?? null;
   const upcomingHeroIndex = heroPlaces.length ? (heroIndex + 1) % heroPlaces.length : 0;
 
   useLayoutEffect(() => {
@@ -389,14 +390,14 @@ function App() {
       <button type="button" aria-label="Další část stránky" title="Dolů" disabled={sectionIndex === pageSections.length - 1} onClick={() => glideTo(pageSections[sectionIndex + 1])}><ArrowDown size={20}/></button>
     </nav>
     <header className="topbar">
-      <a className={`brand brand-with-logo is-${logoPhase}`} href="#uvod" aria-label="Kam ven? Úvod"><img className="header-logo" src="/kam-ven-logo-transparent.png" alt="Kam ven"/><small>PLZEŇSKÝ KRAJ</small></a>
+      <a className={`brand brand-with-logo is-${logoPhase}`} href="#uvod" aria-label="Kam ven? Úvod" tabIndex={logoPhase === 'hidden' ? -1 : undefined}><img className="header-logo" src="/kam-ven-logo-transparent.png" alt="Kam ven"/><small>PLZEŇSKÝ KRAJ</small></a>
     </header>
 
     <main id="uvod">
       <section className="hero">
         <div className="hero-content">
           <h1>Ven za<br/><em>přírodou.</em></h1>
-          <p>Kam vyrazit, když toužíš po zeleni nebo sněhu?</p>
+          <p>V létě do lesa, v zimě na hory.</p>
         </div>
         <div className="hero-image">{heroPlaces.map((place, index) => <div ref={(node) => { heroSlideRefs.current[index] = node; }} key={place.id} className={`hero-slide ${index === heroIndex ? 'active' : ''} ${index === upcomingHeroIndex ? 'upcoming' : ''}`} style={{ backgroundImage: `url("${heroImageUrl(place)}")` }} aria-hidden="true"/>)}{heroPlaces[heroIndex] && <a className="hero-photo-source" href={heroPlaces[heroIndex].imageSource} target="_blank" rel="noreferrer">{heroPlaces[heroIndex].name} · foto ↗</a>}</div>
       </section>
@@ -406,7 +407,7 @@ function App() {
           <div className="controls-panel">
             <div className="mode-switch" role="group" aria-label="Režim výletu"><button className={mode === 'green' ? 'chosen' : ''} onClick={() => setMode('green')} aria-pressed={mode === 'green'}><Sprout size={28}/><span>Za zelení</span></button><button className={mode === 'snow' ? 'chosen' : ''} onClick={() => setMode('snow')} aria-pressed={mode === 'snow'}><Snowflake size={28}/><span>Za sněhem</span></button></div>
             <label className="sr-only" htmlFor="town">Výchozí obec</label><div className="select-wrap"><MapPin size={24} aria-hidden="true"/><strong className="select-value" aria-hidden="true">{town.name}</strong><select id="town" value={townIndex} onChange={(event) => setTownIndex(Number(event.target.value))}>{towns.map((item, index) => <option key={item.name} value={index}>{item.name}</option>)}</select><span className="select-arrow" aria-hidden="true"><ChevronDown size={22} strokeWidth={2.5}/></span></div>
-            <div className="range-head"><label className="sr-only" htmlFor="range">Maximální vzdálenost</label><strong ref={rangeLabelRef}>Do {range} km</strong></div><input id="range" className="range-input" type="range" min="0" max={distanceOptions.length - 1} step="1" value={currentRangeIndex} onChange={(event) => setRangeIndex(Number(event.target.value))} style={{'--progress': `${distanceOptions.length === 1 ? 100 : currentRangeIndex / (distanceOptions.length - 1) * 100}%`} as React.CSSProperties}/><div className="range-labels">{distanceOptions.map((distance) => <span key={distance}>{distance}</span>)}</div>
+            <div className="range-head"><label className="sr-only" htmlFor="range">Maximální vzdálenost</label><strong ref={rangeLabelRef}>Do {range} km</strong></div><input id="range" className="range-input" type="range" min="0" max={distanceOptions.length - 1} step="1" value={currentRangeIndex} aria-valuetext={`Do ${range} km`} onChange={(event) => setRangeIndex(Number(event.target.value))} style={{'--progress': `${distanceOptions.length === 1 ? 100 : currentRangeIndex / (distanceOptions.length - 1) * 100}%`} as React.CSSProperties}/><div className="range-labels">{distanceOptions.map((distance) => <span key={distance}>{distance}</span>)}</div>
           </div>
           <div className="map-panel"><MapContainer center={[49.52, 13.12]} zoom={7.5} minZoom={7.5} zoomSnap={0.5} maxBounds={regionBounds} maxBoundsViscosity={1} scrollWheelZoom={true} className="map" zoomControl={false}>
             <ZoomControl position="topright"/>
@@ -417,13 +418,13 @@ function App() {
             <Marker position={town.coordinates} icon={L.divIcon({className:'origin-icon',html:'<div class="origin-marker"><span></span></div>',iconSize:[24,24],iconAnchor:[12,12]})}><Popup>Výchozí obec: {town.name}</Popup></Marker>
             {[...display.map((item) => item.place), ...outside.map((item) => item.place)].map((place) => { const rank = results.findIndex((result) => result.place.id === place.id); const inRange = distanceKm(town.coordinates, place.coordinates) <= range; return <Marker key={place.id} position={place.coordinates} icon={pin(selectedId === place.id, mode, inRange, inRange, rank >= 0 ? rank + 1 : undefined)} eventHandlers={{click: () => setSelectedId(place.id)}}/>; })}
             {selected && <Circle center={selected.coordinates} radius={250} pathOptions={{color: mode === 'green' ? '#4f7351' : '#4d8ba3', fillColor: mode === 'green' ? '#84ae81' : '#a8d4e5', fillOpacity: .26, weight: 2}}/>}
-          </MapContainer><div className="map-overlay"><LocateFixed size={15}/> {town.name} <span>·</span> {eligibleCount} {eligibleCount === 1 ? 'místo' : 'míst'} v dosahu</div>{tileError && <div className="map-error" role="status">Mapový podklad se nenačetl. Body výletů zůstávají dostupné v kartách.</div>}
+          </MapContainer><div className="map-overlay"><LocateFixed size={15}/> {town.name} <span>·</span> {display.length} tipů z {eligibleCount} míst v dosahu</div>{tileError && <div className="map-error" role="status">Mapový podklad se nenačetl. Body výletů zůstávají dostupné v kartách.</div>}
           {selected && <div className="selected-note" role="region" aria-label={`Trasy k místu ${selected.name}`}>
-            <div className="selected-note-head"><Compass size={18}/><span><strong>{selected.name}</strong><small>Okolí 250 m · <a href={selected.accessSource} target="_blank" rel="noreferrer">Ověřit přístup ↗</a></small></span><button className="selection-close" type="button" onClick={() => setSelectedId(null)} aria-label="Zavřít vybrané místo"><X size={17}/></button></div>
+            <div className="selected-note-head"><Compass size={18}/><span><strong>{selected.name}</strong><small>Okolí 250 m · <a href={selected.accessSource} target="_blank" rel="noreferrer">{selected.access === 'Přístupnost není ověřena.' ? 'Další informace' : 'Ověřit přístup'} ↗</a></small></span><button className="selection-close" type="button" onClick={() => setSelectedId(null)} aria-label="Zavřít vybrané místo"><X size={17}/></button></div>
             <div className="route-actions"><a href={directionsUrl(town.coordinates, selected.coordinates, 'walking')} target="_blank" rel="noreferrer">Trasa pěšky <ArrowUpRight size={14}/></a><a href={directionsUrl(town.coordinates, selected.coordinates, 'driving')} target="_blank" rel="noreferrer">Trasa autem <ArrowUpRight size={14}/></a></div>
             <details className="selected-sources"><summary>Zdroje a měření</summary>
               {selectedMeasurement && <p>{mode === 'green' ? `NDVI ${selectedMeasurement.value.toFixed(2).replace('.', ',')}` : `Sníh ${Math.round(selectedMeasurement.value)} %`} · platná plocha {Math.round(selectedMeasurement.validFraction * 100)} % · oblačnost {Math.round(selectedMeasurement.cloudFraction * 100)} % · snímek {new Date(selectedMeasurement.date).toLocaleDateString('cs-CZ')}{mode === 'snow' && isOld(selectedMeasurement.date) && ' · Historický snímek nevypovídá o dnešním sněhu.'}</p>}
-              {selectedMeasurement && <><a href={browserUrl(selected, selectedMeasurement)} target="_blank" rel="noreferrer">Zobrazit oblast v Copernicus Browser <ExternalLink size={12}/></a><p title={selectedMeasurement.source}>ID produktu: {selectedMeasurement.sceneId}</p></>}
+              {selectedMeasurement && <><a href={browserUrl(selected, selectedMeasurement)} target="_blank" rel="noreferrer">Zobrazit oblast v Copernicus Browser <ExternalLink size={12}/></a><p title={selectedMeasurement.source}>ID scény: {selectedMeasurement.sceneId}</p></>}
               {selected.imageSource && <a href={selected.imageSource} target="_blank" rel="noreferrer">Foto: {selected.imageCredit} <ExternalLink size={12}/></a>}
               {selected.sourceUrl && <a href={selected.sourceUrl} target="_blank" rel="noreferrer">Údaje: {selected.sourceLabel ?? 'zdroj'} <ExternalLink size={12}/></a>}
               <a href={selected.osm} target="_blank" rel="noreferrer">Poloha v OpenStreetMap <ExternalLink size={12}/></a>
@@ -449,10 +450,10 @@ function App() {
     </main>
     <div className="final-section" id="zdroje">
       <section className={`method ${methodActive ? 'is-active' : ''}`} id="jak-to-funguje" ref={methodRef}>
-        <div className="method-intro js-reveal"><h2>Jak to funguje</h2><SensorInsight mode={mode}/></div>
-        <OrbitMethodVisual/>
+        <h2 className="method-heading js-reveal">Jak to funguje</h2>
+        <div className="method-camera"><div className="method-world"><SurfaceReflectance/><OrbitMethodVisual/></div></div>
       </section>
-      <footer><div className="footer-top"><img className="footer-logo" src="/kam-ven-logo-transparent.png" alt="Kam ven"/><p>Tak kam dneska vyrazíš?</p></div><div className="footer-bottom"><span>© 2026 KAM VEN?</span><div><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a><a href="https://dataspace.copernicus.eu/" target="_blank" rel="noreferrer">Copernicus</a><a href="https://land.copernicus.eu/en/products/snow/fractional-snow-cover" target="_blank" rel="noreferrer">FSC</a><a href="https://www.plzenskykraj-kct.cz/" target="_blank" rel="noreferrer">KČT</a></div></div></footer>
+      <footer><div className="footer-top"><img className="footer-logo" src="/kam-ven-logo-transparent.png" alt="Kam ven"/><p>Svět čeká za dveřmi.</p></div><div className="footer-bottom"><span>© 2026 KAM VEN?</span><div><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a><a href="https://dataspace.copernicus.eu/" target="_blank" rel="noreferrer">Copernicus</a><a href="https://land.copernicus.eu/en/products/snow/fractional-snow-cover" target="_blank" rel="noreferrer">FSC</a><a href="https://www.plzenskykraj-kct.cz/" target="_blank" rel="noreferrer">KČT</a></div></div></footer>
     </div>
   </div>;
 }
